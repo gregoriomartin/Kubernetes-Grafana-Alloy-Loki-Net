@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: observability
+data:
+  config.alloy: |
+    logging {
+      level  = "info"
+      format = "logfmt"
+    }
+
+    // Discover Kubernetes pods
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces {
+        names = ["default", "observability"]
+      }
+    }
+
+    // Scrape logs from discovered pods
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+      
+      // Only target pods with specific labels
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        regex         = "logging-app"
+        action        = "keep"
+      }
+      
+      // Set job label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "job"
+      }
+      
+      // Set instance label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "instance"
+      }
+      
+      // Set namespace label
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      
+      // Set pod name label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      
+      // Set container name label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+      
+      // Set the log path
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        separator     = "/"
+        target_label  = "__path__"
+        replacement   = "/var/log/pods/*$1/*.log"
+      }
+    }
+
+    // Scrape container logs
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.process.pod_logs.receiver]
+    }
+
+    // Process and parse logs
+    loki.process "pod_logs" {
+      forward_to = [loki.write.loki.receiver]
+      
+      stage.json {
+        expressions = {
+          timestamp = "time",
+          level     = "log",
+          message   = "log",
+        }
+      }
+      
+      stage.labels {
+        values = {
+          level = "level",
+        }
+      }
+      
+      stage.timestamp {
+        source = "timestamp"
+        format = "RFC3339"
+      }
+      
+      stage.output {
+        source = "message"
+      }
+    }
+
+    // Send logs to Loki
+    loki.write "loki" {
+      endpoint {
+        url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+
+    // Also collect container logs directly from filesystem
+    loki.source.file "container_logs" {
+      targets = [
+        {
+          __path__ = "/var/log/containers/*logging-app*.log",
+          job      = "logging-app-containers",
+        },
+      ]
+      forward_to = [loki.process.container_logs.receiver]
+    }
+
+    loki.process "container_logs" {
+      forward_to = [loki.write.loki.receiver]
+      
+      // Parse container log format
+      stage.regex {
+        expression = "^(?P<timestamp>\\S+) (?P<stream>stdout|stderr) (?P<flags>\\S+) (?P<message>.*)"
+      }
+      
+      stage.timestamp {
+        source = "timestamp"
+        format = "RFC3339Nano"
+      }
+      
+      stage.labels {
+        values = {
+          stream = "stream",
+        }
+      }
+      
+      // Try to parse JSON logs
+      stage.json {
+        expressions = {
+          level      = "Level",
+          msg        = "Message",
+          properties = "Properties",
+        }
+      }
+      
+      stage.labels {
+        values = {
+          level = "level",
+        }
+      }
+      
+      stage.output {
+        source = "message"
+      }
+    }
