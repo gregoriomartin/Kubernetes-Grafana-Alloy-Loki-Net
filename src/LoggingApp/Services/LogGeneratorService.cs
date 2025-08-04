@@ -1,11 +1,13 @@
 using Serilog;
 using Serilog.Events;
+using System.Diagnostics;
 
 namespace LoggingApp.Services;
 
 public class LogGeneratorService : BackgroundService
 {
     private readonly ILogger<LogGeneratorService> _logger;
+    private readonly ActivitySource _activitySource;
     private readonly Random _random = new();
     private int _logCounter = 0;
 
@@ -16,9 +18,10 @@ public class LogGeneratorService : BackgroundService
     private readonly string[] _databases = { "UserDB", "OrderDB", "ProductDB", "LoggingDB", "CacheDB" };
     private readonly string[] _apiEndpoints = { "/api/users", "/api/orders", "/api/products", "/api/payments", "/api/notifications" };
 
-    public LogGeneratorService(ILogger<LogGeneratorService> logger)
+    public LogGeneratorService(ILogger<LogGeneratorService> logger, ActivitySource activitySource)
     {
         _logger = logger;
+        _activitySource = activitySource;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,10 +45,27 @@ public class LogGeneratorService : BackgroundService
 
     private void GenerateContinuousLogs()
     {
+        using var activity = _activitySource.StartActivity("GenerateContinuousLogs");
         _logCounter++;
+        
+        activity?.SetTag("log.counter", _logCounter);
         
         // Generate different types of logs in rotation
         var logType = _logCounter % 8;
+        var logTypeName = logType switch
+        {
+            0 => "Info",
+            1 => "Warning", 
+            2 => "Error",
+            3 => "Debug",
+            4 => "Performance",
+            5 => "Security",
+            6 => "Business",
+            7 => "System",
+            _ => "Unknown"
+        };
+        
+        activity?.SetTag("log.type", logTypeName);
         
         switch (logType)
         {
