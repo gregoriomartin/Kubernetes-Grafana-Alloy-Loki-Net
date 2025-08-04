@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Deploying Observability Stack (Grafana, Loki, Alloy)..."
+echo "Deploying Observability Stack (Grafana, Loki, Mimir, Tempo, Alloy)..."
 
 # Check if kubectl is available
 if ! command -v kubectl &> /dev/null; then
@@ -24,6 +24,12 @@ if [ $? -eq 0 ]; then
     echo "Waiting for Loki to be ready..."
     kubectl wait --for=condition=ready pod -l app=loki -n observability --timeout=300s
     
+    echo "Waiting for Mimir to be ready..."
+    kubectl wait --for=condition=ready pod -l app=mimir -n observability --timeout=300s
+    
+    echo "Waiting for Tempo to be ready..."
+    kubectl wait --for=condition=ready pod -l app=tempo -n observability --timeout=300s
+    
     echo "Waiting for Grafana to be ready..."
     kubectl wait --for=condition=ready pod -l app=grafana -n observability --timeout=300s
     
@@ -38,7 +44,6 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "🌐 Access URLs:"
     echo "  - Grafana: http://localhost:30300 (admin/admin)"
-    echo "  - Loki API: http://localhost:30100 (if exposed)"
     
     echo ""
     echo "📋 Default Grafana Credentials:"
@@ -46,9 +51,14 @@ if [ $? -eq 0 ]; then
     echo "  Password: admin"
     
     echo ""
-    echo "🔍 Pre-configured Dashboard:"
-    echo "  - '.NET Core Application Logs' dashboard is available"
-    echo "  - Loki datasource is pre-configured"
+    echo "🔍 Pre-configured Components:"
+    echo "  - Loki datasource for logs"
+    echo "  - Mimir datasource for metrics (Prometheus-compatible)"
+    echo "  - Tempo datasource for traces"
+    echo "  - '.NET Core Application Logs' dashboard"
+    echo "  - '.NET Core Application Metrics' dashboard"
+    echo "  - '.NET Core Application Traces' dashboard"
+    echo "  - Alloy configured for metrics scraping, log collection, and trace forwarding"
     
 else
     echo "❌ Observability stack deployment failed!"
