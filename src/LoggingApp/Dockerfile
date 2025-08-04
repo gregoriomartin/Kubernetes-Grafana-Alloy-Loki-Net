@@ -10,10 +10,10 @@ RUN mkdir -p /app/logs && chmod 777 /app/logs
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["LoggingApp/LoggingApp.csproj", "LoggingApp/"]
-RUN dotnet restore "LoggingApp/LoggingApp.csproj"
+COPY ["LoggingApp.csproj", "."]
+RUN dotnet restore "./LoggingApp.csproj"
 COPY . .
-WORKDIR "/src/LoggingApp"
+WORKDIR "/src"
 RUN dotnet build "./LoggingApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
