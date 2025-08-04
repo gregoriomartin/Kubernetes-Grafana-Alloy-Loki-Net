@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mimir-config
+  namespace: observability
+data:
+  mimir.yaml: |
+    # Disable multitenancy
+    multitenancy_enabled: false
+    
+    # Configure server
+    server:
+      http_listen_port: 8080
+      grpc_listen_port: 9095
+      log_level: info
+      
+    # Common configuration
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data/mimir
+          
+    # Ingester configuration
+    ingester:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+        
+    # Distributor configuration  
+    distributor:
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+          
+    # Querier configuration
+    querier:
+      max_concurrent: 20
+      
+    # Query frontend configuration
+    query_frontend:
+      max_cache_freshness: 10m
+      
+    # Compactor configuration
+    compactor:
+      working_directory: /data/mimir/compactor
+      
+    # Store gateway configuration
+    store_gateway:
+      sharding_ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+          replication_factor: 1
+          
+    # Ruler configuration
+    ruler:
+      rule_path: /data/mimir/rules
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+        
+    # Limits configuration
+    limits:
+      ingestion_rate: 100000
+      ingestion_burst_size: 200000
+      max_global_series_per_user: 0
+      max_global_series_per_metric: 0

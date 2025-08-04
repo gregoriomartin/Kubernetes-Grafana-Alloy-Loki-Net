@@ -13,6 +13,10 @@ spec:
     metadata:
       labels:
         app: logging-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: logging-app
@@ -26,6 +30,12 @@ spec:
           value: "Production"
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
+        - name: OpenTelemetry__Endpoint
+          value: "http://alloy.observability.svc.cluster.local:4317"
+        - name: OpenTelemetry__ServiceName
+          value: "logging-app"
+        - name: OpenTelemetry__ServiceVersion
+          value: "1.0.0"
         resources:
           requests:
             memory: "256Mi"

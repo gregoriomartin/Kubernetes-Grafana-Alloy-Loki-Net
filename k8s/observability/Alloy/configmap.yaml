@@ -10,7 +10,7 @@ data:
       format = "logfmt"
     }
 
-    // Discover Kubernetes pods
+    // Discover Kubernetes pods for logs
     discovery.kubernetes "pods" {
       role = "pod"
       namespaces {
@@ -18,7 +18,84 @@ data:
       }
     }
 
-    // Scrape logs from discovered pods
+    // Discover Kubernetes services for metrics scraping
+    discovery.kubernetes "services" {
+      role = "service"
+      namespaces {
+        names = ["default", "observability"]
+      }
+    }
+
+    // Discover Kubernetes pods for metrics scraping
+    discovery.kubernetes "pods_metrics" {
+      role = "pod"
+      namespaces {
+        names = ["default", "observability"]
+      }
+    }
+
+    // Configure targets for metrics scraping
+    discovery.relabel "pod_metrics" {
+      targets = discovery.kubernetes.pods_metrics.targets
+      
+      // Only target pods with metrics annotations
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+        regex         = "true"
+        action        = "keep"
+      }
+      
+      // Set metrics path
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+        target_label  = "__metrics_path__"
+        regex         = "(.+)"
+      }
+      
+      // Set port for metrics scraping
+      rule {
+        source_labels = ["__address__", "__meta_kubernetes_pod_annotation_prometheus_io_port"]
+        regex         = "([^:]+)(?::\\d+)?;(\\d+)"
+        replacement   = "$1:$2"
+        target_label  = "__address__"
+      }
+      
+      // Set job label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "job"
+      }
+      
+      // Set instance label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "instance"
+      }
+      
+      // Set namespace label
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+    }
+
+    // Scrape metrics from applications
+    prometheus.scrape "pod_metrics" {
+      targets    = discovery.relabel.pod_metrics.output
+      forward_to = [prometheus.remote_write.mimir.receiver]
+      
+      scrape_interval = "30s"
+      scrape_timeout  = "10s"
+    }
+
+    // Send metrics to Mimir
+    prometheus.remote_write "mimir" {
+      endpoint {
+        url = "http://mimir.observability.svc.cluster.local:8080/api/v1/push"
+      }
+    }
+
+    // Configure targets for log collection
     discovery.relabel "pod_logs" {
       targets = discovery.kubernetes.pods.targets
       
@@ -156,5 +233,30 @@ data:
       
       stage.output {
         source = "message"
+      }
+    }
+
+    // OpenTelemetry receiver for traces
+    otelcol.receiver.otlp "default" {
+      grpc {
+        endpoint = "0.0.0.0:4317"
+      }
+      
+      http {
+        endpoint = "0.0.0.0:4318"
+      }
+      
+      output {
+        traces = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    // Export traces to Tempo
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "http://tempo.observability.svc.cluster.local:4317"
+        tls {
+          insecure = true
+        }
       }
     }

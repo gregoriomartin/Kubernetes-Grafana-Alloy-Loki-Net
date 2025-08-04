@@ -4,6 +4,8 @@ kind: Kustomization
 resources:
 - namespace.yaml
 - loki
+- mimir
+- tempo
 - alloy
 - grafana
 

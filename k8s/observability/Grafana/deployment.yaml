@@ -61,8 +61,14 @@ spec:
         - mountPath: /etc/grafana/provisioning/dashboards
           name: grafana-dashboards-config
           readOnly: false
-        - mountPath: /var/lib/grafana/dashboards
+        - mountPath: /var/lib/grafana/dashboards/logging
           name: grafana-dashboard-logging
+          readOnly: false
+        - mountPath: /var/lib/grafana/dashboards/metrics
+          name: grafana-dashboard-metrics
+          readOnly: false
+        - mountPath: /var/lib/grafana/dashboards/traces
+          name: grafana-dashboard-traces
           readOnly: false
         - mountPath: /var/lib/grafana
           name: grafana-storage
@@ -83,5 +89,13 @@ spec:
         configMap:
           defaultMode: 420
           name: grafana-dashboard-logging
+      - name: grafana-dashboard-metrics
+        configMap:
+          defaultMode: 420
+          name: grafana-dashboard-metrics
+      - name: grafana-dashboard-traces
+        configMap:
+          defaultMode: 420
+          name: grafana-dashboard-traces
       - name: grafana-storage
         emptyDir: {}
