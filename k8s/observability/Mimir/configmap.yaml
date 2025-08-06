@@ -13,13 +13,16 @@ data:
       http_listen_port: 8080
       grpc_listen_port: 9095
       log_level: info
+    
+    activity_tracker:
+      filepath: /data/mimir/metrics-activity.log
       
     # Common configuration
     common:
       storage:
         backend: filesystem
         filesystem:
-          dir: /data/mimir
+          dir: /data/mimir/blocks
           
     # Ingester configuration
     ingester:
@@ -40,30 +43,38 @@ data:
     querier:
       max_concurrent: 20
       
-    # Query frontend configuration
-    query_frontend:
-      max_cache_freshness: 10m
-      
-    # Compactor configuration
-    compactor:
-      working_directory: /data/mimir/compactor
-      
     # Store gateway configuration
     store_gateway:
       sharding_ring:
         instance_addr: 127.0.0.1
         kvstore:
           store: inmemory
-          replication_factor: 1
           
     # Ruler configuration
     ruler:
-      rule_path: /data/mimir/rules
+      rule_path: /data/mimir/data-ruler/
       ring:
         instance_addr: 127.0.0.1
         kvstore:
           store: inmemory
-        replication_factor: 1
+
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/mimir/ruler
+    
+    blocks_storage:
+      backend: filesystem
+      bucket_store:
+        sync_dir: /data/mimir/tsdb-sync
+      tsdb:
+        dir: /data/mimir/tsdb
+
+    compactor:
+      data_dir: /data/mimir/data-compactor
+    
+    alertmanager:
+      data_dir: /data/mimir/data-alertmanager
         
     # Limits configuration
     limits:
@@ -71,3 +82,4 @@ data:
       ingestion_burst_size: 200000
       max_global_series_per_user: 0
       max_global_series_per_metric: 0
+      max_cache_freshness: 10m

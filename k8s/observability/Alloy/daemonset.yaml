@@ -41,11 +41,11 @@ spec:
           name: otlp-http
         resources:
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: 250m
+            memory: 128Mi
           requests:
             cpu: 250m
-            memory: 256Mi
+            memory: 128Mi
         volumeMounts:
         - name: config
           mountPath: /etc/alloy

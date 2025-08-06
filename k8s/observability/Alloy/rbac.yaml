@@ -17,6 +17,7 @@ rules:
   - services
   - endpoints
   - pods
+  - pods/app-logs
   - events
   verbs: ["get", "list", "watch"]
 - apiGroups: ["networking.k8s.io"]

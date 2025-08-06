@@ -8,5 +8,5 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
-  storageClassName: local-path # Adjust based on your cluster
+      storage: 5Gi
+  storageClassName: "hostpath"

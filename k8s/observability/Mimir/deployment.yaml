@@ -35,12 +35,12 @@ spec:
         - name: GOMEMLIMIT
           value: "1GiB"
         resources:
-          requests:
-            memory: 512Mi
-            cpu: 250m
           limits:
-            memory: 1Gi
-            cpu: 500m
+            cpu: 250m
+            memory: 128Mi
+          requests:
+            cpu: 250m
+            memory: 128Mi
         readinessProbe:
           httpGet:
             path: /ready
