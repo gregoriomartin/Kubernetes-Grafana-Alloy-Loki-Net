@@ -42,12 +42,12 @@ spec:
         - name: data
           mountPath: /data/tempo
         resources:
-          limits:
-            cpu: 100m
-            memory: 128Mi
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
         readinessProbe:
           httpGet:
             path: /ready
